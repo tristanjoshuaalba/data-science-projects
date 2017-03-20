@@ -70,4 +70,5 @@ print "Mean Squared Error: %.3f" % np.mean((model.predict(X_test) - y_test) ** 2
 ## Est 2030 Philippines Life Expectancy Life Expectancy: 73.32
 ## Est 2045 Philippines Life Expectancy Life Expectancy: 76.55
 ## Score: 0.801
-## Mean Squared Error: 0.521 years                                        
+## Mean Squared Error: 0.521 years        
+

@@ -1,0 +1,407 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib
+
+matplotlib.style.use('ggplot')
+
+# Import AWCustomer.csv data
+cust = pd.read_csv('C:\Users\TristanJoshua\Google Drive\!!_Data Science\Data Science\Data Science Project MPP\AWCustomers.csv')
+# Check first five items in cust dataframe
+cust.head()
+# Check if no NAN values
+cust[pd.isnull(cust).any(axis=1)]
+# Count NAN values
+for column in cust:
+    print column, '\n', cust[str(column)].isnull().value_counts(), '\n'
+# Drop NAN values
+cust.dropna(axis=1, inplace=True)
+# Drop duplicates 
+cust.drop_duplicates(subset=['CustomerID'], inplace=True)
+# Correct data types
+cust.BirthDate = pd.to_datetime(cust.BirthDate, errors='coerce')
+cust.LastUpdated = pd.to_datetime(cust.LastUpdated, errors='coerce')
+# Check dtypes
+cust.dtypes
+# Import AWSales.csv data
+sales = pd.read_csv('C:\Users\TristanJoshua\Google Drive\!!_Data Science\Data Science\Data Science Project MPP\AWSales.csv')
+# Find out which columns have NAN values
+for column in sales:
+    print column, '\n', sales[str(column)].isnull().value_counts(), '\n'
+# Check if no NAN values
+sales[pd.isnull(sales).any(axis=1)]
+
+# Merge Customer and Sales Data into one dataframe X
+X = pd.merge(cust, sales, how = 'inner', on='CustomerID')
+
+# Calculate age
+from datetime import date
+today = date.today()    
+X['age'] = (today - X['BirthDate']).astype('<m8[Y]')
+#%%
+#Find Range of AvgMonthlyspend by age and gender
+X[(X.age < 26) & (X.age > 18)].groupby(by='Gender').describe()
+#%%Find Range of AvgMonthlyspend by age and gender
+X[(X.age < 51) & (X.age > 29)].groupby(by='Gender').describe()
+#%%
+import seaborn as sns
+sns.heatmap(X.corr(), xticklabels = X.corr().columns.values,
+            yticklabels = X.corr().columns.values)
+
+
+X.groupby('MaritalStatus').AvgMonthSpend.median() 
+X.groupby('Gender').AvgMonthSpend.median()
+X.groupby('NumberCarsOwned').AvgMonthSpend.describe()
+X.groupby('NumberChildrenAtHome').AvgMonthSpend.median()
+X.groupby('BikeBuyer').YearlyIncome.median()
+X.groupby('BikeBuyer').NumberCarsOwned.describe()
+X.groupby('BikeBuyer').Occupation.describe()
+X.groupby('BikeBuyer').Gender.describe()
+X.groupby('BikeBuyer').MaritalStatus.describe()
+
+#%%Function for visualizing histograms for data exploration
+fontsize = 20
+def CompareHist(ax, hist1, hist2, legend, title, x, bins):
+    ax.hist(hist1, bins = bins, alpha = 0.72, color = '#FFA500')
+    ax.hist(hist2, bins = bins, alpha = 0.72, color = '#40E0D0')
+    ax.legend(legend, fontsize=fontsize-5)
+    ax.set_facecolor('#ffffff')
+    ax.set_title(title, fontsize=fontsize)
+    ax.set_xlabel(x, fontsize=fontsize)
+    ax.set_ylabel('Frequency', fontsize=fontsize)
+    ax.grid(which='major', linestyle='-', color='#D3D3D3') 
+
+#Function for visualizing box charts for data exploration
+def CompareBox(ax, boxes, xticklabels, title, xlabel, ylabel):
+    box = ax.boxplot(boxes, sym='k+', notch=True, patch_artist = True, widths = 0.4)
+    plt.setp(ax, xticklabels=xticklabels)
+    colors1 = ['#FFA500','#40E0D0']
+    for patch, color in zip(box['boxes'], colors1):
+        patch.set_facecolor(color)
+        patch.set_edgecolor('#9499A6')
+    for whisker in box['whiskers']:
+        whisker.set(color='#9499A6',lw=2)
+    
+    ax.set_facecolor('#ffffff')
+    ax.set_title(title, fontsize=fontsize)
+    ax.set_xlabel(xlabel, fontsize=fontsize)
+    ax.set_ylabel(ylabel, fontsize=fontsize)
+    ax.grid(which='major', linestyle='-', color='#D3D3D3') 
+
+#Function for visualizing box plots for data exploration
+def CompareBoxplot(ax, title):
+    import numpy as np
+    N = 5
+    ind = np.arange(N)
+    
+    def bikebuyer(x):
+        bikebuyer = [len(X[X.BikeBuyer==x][X.Occupation == 'Manual'].CustomerID),\
+                len(X[X.BikeBuyer==x][X.Occupation == 'Skilled Manual'].CustomerID),\
+                len(X[X.BikeBuyer==x][X.Occupation == 'Clerical'].CustomerID),\
+                len(X[X.BikeBuyer==x][X.Occupation == 'Management'].CustomerID),\
+                len(X[X.BikeBuyer==x][X.Occupation == 'Professional'].CustomerID)]
+        return bikebuyer
+    
+    ax.bar(ind, bikebuyer(0), color = '#FFA500')
+    ax.bar(ind, bikebuyer(1), color = '#40E0D0', bottom = bikebuyer(0) )
+    ax.set_title(title, fontsize=fontsize)
+    ax.set_ylabel('Frequency', fontsize=fontsize)
+    ax.set_xlabel('Occupation', fontsize=fontsize)
+    ax.set_xticklabels(['','Manual', 'Skilled', 'Clerical', 'Management', 'Professional'], fontsize=fontsize-5)
+    ax.legend(['No Bike', 'With Bike'], fontsize=fontsize-5)
+    ax.set_facecolor('#ffffff')
+    ax.grid(which='major', linestyle='-', color='#D3D3D3') 
+    return ax
+
+
+fig = plt.figure(figsize=(25,20))
+
+def ax(ax):
+    return plt.subplot(ax)
+
+CompareHist(ax(331), X[X.MaritalStatus == 'M'].AvgMonthSpend, X[X.MaritalStatus == 'S'].AvgMonthSpend,
+            ['Married','Single'],'Average Monthly Spend by Marital Status', 'AvgMonthlySpend', 30)
+
+CompareHist(ax(332), X[X.Gender == 'M'].AvgMonthSpend,X[X.Gender == 'F'].AvgMonthSpend,
+            ['Male','Female'],'Average Monthly Spend by Gender', 'AvgMonthlySpend', 30)
+
+CompareHist(ax(333), X[X.NumberCarsOwned == 0].AvgMonthSpend,X[X.NumberCarsOwned > 0].AvgMonthSpend,
+            ['None','One or More'],'Average Monthly Spend by Cars Owned', 'AvgMonthlySpend', 30)
+
+CompareHist(ax(334), X[X.NumberChildrenAtHome == 0].AvgMonthSpend,X[X.NumberChildrenAtHome > 0].AvgMonthSpend,
+            ['None','One or More'],'Average Monthly Spend by Children at Home', 'AvgMonthlySpend',30)
+
+CompareHist(ax(335), X[X.MaritalStatus == 'M'].BikeBuyer, X[X.MaritalStatus == 'S'].BikeBuyer,
+            ['Married','Single'],'BikeBuyer by Marital Status', 'BikeBuyer', 3)
+
+CompareHist(ax(336), X[X.Gender == 'M'].BikeBuyer,X[X.Gender == 'F'].BikeBuyer,
+            ['Male','Female'],'BikeBuyer by Gender', 'BikeBuyer', 3)
+
+CompareBox(ax(337),[X[X.BikeBuyer==0].YearlyIncome,X[X.BikeBuyer==1].YearlyIncome],
+           ['Yes','No'],'YearlyIncome by BikeBuyer', 'BikeBuyer', 'YearlyIncome')
+
+CompareBoxplot(ax(338), 'BikeBuyers by Occupation')
+
+CompareHist(ax(339),X[X.BikeBuyer==0].NumberCarsOwned,X[X.BikeBuyer==1].NumberCarsOwned,\
+             ['NotBikeBuyer','BikeBuyer'],'NumberCarsOwned by BikeBuyer', 'NumberCarsOwned', 10)
+
+fig.tight_layout()
+plt.show
+
+#
+#Fitting a Classification Model
+#Separating the response variable
+#Eliminating irrelevant features
+y = X['BikeBuyer'].copy()
+X.drop(labels = ['BikeBuyer','CustomerID','FirstName','LastName', 'AddressLine1','City',\
+                 'StateProvinceName','CountryRegionName','PostalCode','PhoneNumber',\
+                 'AvgMonthSpend', 'BirthDate', 'LastUpdated'], inplace=True, axis=1)
+
+#Getting dummy variables for columns Gender and Marital Status
+X = pd.get_dummies(X, columns=['Gender','MaritalStatus'],\
+                   prefix=['gndr','mari_stat'])
+#Getting dummy variables for columns HomeOwnerFlag
+X = pd.get_dummies(X, columns=['HomeOwnerFlag'],\
+                   prefix=['homeown'])
+
+# Mapping variables
+X.Education= X.Education.map({'Partial High School':1, 'High School':2,\
+                              'Partial College':3, 'Bachelors':4,\
+                              'Graduate Degree':5}) 
+X.Occupation= X.Occupation.map({'Manual':1, 'Skilled Manual':2,\
+                              'Clerical':3, 'Management':4,\
+                              'Professional':5}) 
+#%%
+#X.BirthDate = pd.to_numeric(X.BirthDate, errors = 'coerce')
+#X.LastUpdated = pd.to_numeric(X.LastUpdated, errors = 'coerce')
+#
+#%%Data preprocessing step
+from sklearn import preprocessing
+T = preprocessing.StandardScaler().fit_transform(X)
+#T = preprocessing.MinMaxScaler().fit_transform(X)
+#T = preprocessing.Normalizer().fit_transform(X)
+#T = preprocessing.scale(X)
+#T = X # No Change
+#Try dimensionality reduction via PCA
+from sklearn.decomposition import PCA
+pca = PCA(n_components = 10)
+X_pca = pca.fit_transform(T)
+
+#Split data into train and test data
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=7)
+'''
+#LOGISTIC REGRESSION CLASSIFICATION MODEL
+from sklearn.linear_model import LogisticRegression as logreg
+model = logreg(penalty = 'l1', C=8)
+model.fit(X_train, y_train)
+
+score = model.score(X_test, y_test)
+
+print 'Accuracy: %.3f' % score
+#logreg_coef = pd.DataFrame(zip(X.columns, model.coef_[0]))
+
+#SUPPORT VECTOR CLASSIFICATION MODEL
+from sklearn.svm import SVC
+model = SVC(kernel='linear', C=2)
+model.fit(X_train, y_train)
+score = model.score(X_test, y_test)
+print 'Accuracy: %.3f' % score '''
+
+#DECISION TREE CLASSIFIER
+from sklearn import tree
+model = tree.DecisionTreeClassifier(max_depth = 7, criterion='entropy')
+model.fit(X_train, y_train)
+score = model.score(X_test, y_test)
+print 'Accuracy: %.3f' % score
+pred_label = model.predict(X_test)
+pred_proba = model.predict_proba(X_test)
+test_results = X_test.copy()
+test_results['status_pred_label'] = pred_label
+test_results['status_pred_proba'] = pred_proba[:,1]
+test_results['status_true'] = y_test
+
+#%%ROC CURVE
+#Initiate ROC Curve and AUC score computation
+from sklearn.metrics import roc_curve, roc_auc_score
+fpr, tpr, thresholds = roc_curve(y_test,pred_proba[:,1])
+rsc = roc_auc_score(y_test,pred_proba[:,1], average = 'samples') 
+#Plot ROC Curve
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.plot(fpr,tpr, c='#FFA500')
+ax.plot([0,1], '--',c='#40E0D0')
+ax.set_title('BIKEBUYER CLASSIFIER PERFORMANCE')
+ax.set_xlabel('False Positive Rate')    
+ax.set_ylabel('True Positive Rate')
+ax.grid(which='major', linestyle='-', color='#D3D3D3') 
+ax.set_axis_bgcolor('#ffffff')
+plt.text(0.55, 0.05, 'AREA UNDER THE CURVE = %.3f' % rsc )
+ax.legend(['ROC Curve','Random Guess'])
+plt.show()
+
+#%%Show classification metrics
+from sklearn.metrics import confusion_matrix as cm,\
+                            classification_report as cr,\
+                            accuracy_score as asc
+cm = cm(y_test,pred_label)
+cr = cr(y_test,pred_label)
+asc = asc(y_test,pred_label)
+
+print 'BIKEBUYER CLASSIFICATION REPORT\n\n', cr
+print 'Accuracy: %.3f' % asc
+print "True Negatives  = %s \nFalse Negatives = %s \nTrue Positives"\
+      "  = %s \nFalse Positives = %s" % (cm[0,0],cm[1,0],cm[1,1],cm[0,1])
+
+
+#%% Importing Test Data
+
+X_test_class = pd.read_csv('C:\Users\TristanJoshua\Google Drive\!!_Data Science\Data Science\Data Science Project MPP\AWTest-Classification.csv')
+
+test_results = X_test_class['CustomerID'].copy().to_frame()
+
+X_test_class.BirthDate = pd.to_datetime(X_test_class.BirthDate, errors='coerce')
+X_test_class.LastUpdated = pd.to_datetime(X_test_class.LastUpdated, errors='coerce')
+
+
+X_test_class[pd.isnull(X_test_class).any(axis=1)]
+
+for column in X_test_class:
+    print column, '\n', X_test_class[str(column)].isnull().value_counts(), '\n'
+
+X_test_class.dropna(axis=1, inplace=True)
+
+from datetime import date
+today = date.today()   
+ 
+X_test_class['age'] = (today - X_test_class['BirthDate']).astype('<m8[Y]')
+
+X_test_class.drop(labels = ['CustomerID','FirstName','LastName', 'AddressLine1','City',\
+                 'StateProvinceName','CountryRegionName','PostalCode','PhoneNumber',\
+                 'BirthDate', 'LastUpdated'], inplace=True, axis=1)
+
+
+X_test_class = pd.get_dummies(X_test_class, columns=['Gender','MaritalStatus'],\
+                   prefix=['gndr','mari_stat'])
+
+
+X_test_class = pd.get_dummies(X_test_class, columns=['HomeOwnerFlag'],\
+                   prefix=['homeown'])
+
+X_test_class.Education= X_test_class.Education.map({'Partial High School':1, 'High School':2,\
+                              'Partial College':3, 'Bachelors':4,\
+                              'Graduate Degree':5}) 
+X_test_class.Occupation= X_test_class.Occupation.map({'Manual':1, 'Skilled Manual':2,\
+                              'Clerical':3, 'Management':4,\
+                              'Professional':5}) 
+
+#%%Insert prediction and prediction probabilities into separate dataframes
+pred_label = model.predict(X_test_class)
+pred_proba = model.predict_proba(X_test_class)
+test_results['status_pred_label'] = pred_label
+test_results['status_pred_proba'] = pred_proba[:,1]
+
+
+#%%
+#Importing Test Data for Regression
+X_test_reg = pd.read_csv('C:\Users\TristanJoshua\Google Drive\!!_Data Science\Data Science\Data Science Project MPP\AWTest-Regression.csv')
+
+
+test_results = X_test_reg['CustomerID'].copy().to_frame()
+
+X_test_reg.BirthDate = pd.to_datetime(X_test_reg.BirthDate, errors='coerce')
+X_test_reg.LastUpdated = pd.to_datetime(X_test_reg.LastUpdated, errors='coerce')
+
+
+X_test_reg[pd.isnull(X_test_class).any(axis=1)]
+
+for column in X_test_reg:
+    print column, '\n', X_test_reg[str(column)].isnull().value_counts(), '\n'
+
+X_test_reg.dropna(axis=1, inplace=True)
+
+from datetime import date
+today = date.today()   
+ 
+X_test_reg['age'] = (today - X_test_reg['BirthDate']).astype('<m8[Y]')
+
+X_test_reg.drop(labels = ['CustomerID','FirstName','LastName', 'AddressLine1','City',\
+                 'StateProvinceName','CountryRegionName','PostalCode','PhoneNumber',\
+                 'BirthDate', 'LastUpdated'], inplace=True, axis=1)
+
+
+X_test_reg = pd.get_dummies(X_test_reg, columns=['Gender','MaritalStatus'],\
+                   prefix=['gndr','mari_stat'])
+
+
+X_test_reg = pd.get_dummies(X_test_reg, columns=['HomeOwnerFlag'],\
+                   prefix=['homeown'])
+
+X_test_reg.Education= X_test_reg.Education.map({'Partial High School':1, 'High School':2,\
+                              'Partial College':3, 'Bachelors':4,\
+                              'Graduate Degree':5}) 
+X_test_reg.Occupation= X_test_reg.Occupation.map({'Manual':1, 'Skilled Manual':2,\
+                              'Clerical':3, 'Management':4,\
+                              'Professional':5}) 
+
+
+
+#Fitting a Regression Model to predict Average Monthly Spend
+
+y = X['AvgMonthSpend'].copy()
+X.drop(labels = ['BikeBuyer','CustomerID','FirstName','LastName', 'AddressLine1','City',\
+                 'StateProvinceName','CountryRegionName','PostalCode','PhoneNumber',\
+                 'AvgMonthSpend', 'BirthDate', 'LastUpdated'], inplace=True, axis=1)
+    
+X = pd.get_dummies(X, columns=['Gender','MaritalStatus'],\
+                   prefix=['gndr','mari_stat'])
+
+
+X = pd.get_dummies(X, columns=['HomeOwnerFlag'],\
+                   prefix=['homeown'])
+
+
+X.Education= X.Education.map({'Partial High School':1, 'High School':2,\
+                              'Partial College':3, 'Bachelors':4,\
+                              'Graduate Degree':5}) 
+X.Occupation= X.Occupation.map({'Manual':1, 'Skilled Manual':2,\
+                              'Clerical':3, 'Management':4,\
+                              'Professional':5}) 
+
+
+#Preprocessing Step
+from sklearn import preprocessing
+#T = preprocessing.StandardScaler().fit_transform(X)
+#T = preprocessing.MinMaxScaler().fit_transform(X)
+#T = preprocessing.Normalizer().fit_transform(X)
+#T = preprocessing.scale(X)
+#T = X # No Change
+
+from sklearn.decomposition import PCA
+pca = PCA(n_components = 10)
+X_pca = pca.fit_transform(T)
+
+#Splitting data between training and testing data
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=3)
+
+#Decision Tree Regression Model
+from sklearn.tree import DecisionTreeRegressor as dtr
+model = dtr(max_depth=7)
+model.fit(X_train, y_train)
+
+score = model.score(X_test, y_test)
+print 'Accuracy: %.3f' % score
+import numpy as np
+print "Root Mean Squared Error: %.3f" % np.mean(((model.predict(X_test) - y_test) ** 2)**(0.5))
+
+#Plot relationship between actual and predicte AvgMonthlySpend
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.scatter(y_test[0:50], model.predict(X_test[0:50]), c='#40E0D0',marker='o', alpha = 0.5)
+ax.set_xlabel('Scored Labels')
+ax.set_ylabel('AvgMonthlySpending')
+
+#Calculate predicted values based on test data
+pred_label = model.predict(X_test_reg)
+test_results['status_pred_label'] = pred_label
+            
